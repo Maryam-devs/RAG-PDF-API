@@ -17,17 +17,12 @@ def upload_file(file: UploadFile = File(...)):
     # Generate id and save file
     load_pdf = LoadPDF()
     upload_info = load_pdf.store_pdf(file)
-    
-    if upload_info.get("duplicate"):
-        return {
-            "message": "File already exists",
-            "document_id": upload_info["document_id"],
-            "cached": True
-        }
+        
 
     ingestion = DataIngestion()
     ext_text = ingestion.extract_text(upload_info["doc_path"], upload_info['document_id'])
 
     return {
-        "Extracted Text": ext_text
+        "Extracted Text": ext_text['text'][:500],
+        "Chunks_size" : ext_text['chunks_size']
     }

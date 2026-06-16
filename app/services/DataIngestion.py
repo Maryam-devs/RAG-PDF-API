@@ -1,7 +1,6 @@
 from pypdf import PdfReader
 import json
-import os
-
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 class DataIngestion:
 
@@ -18,8 +17,12 @@ class DataIngestion:
 
         # Save extracted text in metadata
         self.update_metadata(document_id, text)
+        chunks_size = self.create_chunks(text)
 
-        return text
+        return {
+            "text" : text,
+            "chunks_size" : chunks_size
+        }
 
 
     def update_metadata(self, document_id, extracted_text):
@@ -39,3 +42,12 @@ class DataIngestion:
         # Save back to file
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(documents, f, indent=4)
+
+    
+    def create_chunks(self, text):
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=50
+        )
+        chunks = splitter.split_text(text)
+        return len(chunks)
