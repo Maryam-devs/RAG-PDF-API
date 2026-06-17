@@ -1,12 +1,9 @@
 from fastapi import FastAPI
 from app.api.uploadFile import router as upload_router
-from dotenv import load_dotenv
-import os
+from app.api.chat import router as chat_router
 
-load_dotenv()
-
-HF_TOKEN = os.getenv("HF_TOKEN")
 
 
 app = FastAPI()
 app.include_router(upload_router)
+app.include_router(chat_router)

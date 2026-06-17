@@ -17,10 +17,10 @@ class LoadPDF:
 
         meta_path = os.path.join(self.META_DIR, "documents.json")
 
-        # 1. hash file
+        # Hash file
         file_hash = self.get_file_hash(file)
 
-        # 2. check duplicate
+        # Check duplicate
         existing = self.find_by_hash(file_hash, meta_path)
 
         if existing:
@@ -31,7 +31,7 @@ class LoadPDF:
                 "duplicate": True
             }
 
-        # 3. new document
+        # New document
         doc_id = str(uuid.uuid4())
 
         pdf_path = self.save_pdf(file, doc_id)
@@ -45,16 +45,18 @@ class LoadPDF:
             "duplicate": False
         }
 
+    # Make sure that the directories exist
     def ensure_dirs(self):
         os.makedirs(self.PDF_DIR, exist_ok=True)
         os.makedirs(self.META_DIR, exist_ok=True)
 
-    
+    # Create hash for file
     def get_file_hash(self, file):
         content = file.file.read()
         file.file.seek(0)  
         return hashlib.md5(content).hexdigest()
     
+    # Check if uploaded doc already exists
     def find_by_hash(self, file_hash, meta_path):
         if not os.path.exists(meta_path):
             return None
@@ -72,7 +74,7 @@ class LoadPDF:
 
         return None
 
-
+    # Save file in storage
     def save_pdf(self, file, doc_id):
         file_path = os.path.join(self.PDF_DIR, f"{doc_id}.pdf")
 
@@ -81,6 +83,7 @@ class LoadPDF:
 
         return file_path
 
+    # Save file's metadata
     def save_metadata(self, doc_id, filename, file_hash):
         metadata = {
             "document_id": doc_id,

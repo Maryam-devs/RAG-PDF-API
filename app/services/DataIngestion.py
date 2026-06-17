@@ -1,18 +1,16 @@
 from pypdf import PdfReader
 import json
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from sentence_transformers import SentenceTransformer
 import chromadb
 import uuid
-import os
+from app.core.models import get_embedding_model
+
 
 
 class DataIngestion:
 
     def __init__(self):
-        self.embedding_model = SentenceTransformer(
-            "all-MiniLM-L6-v2"
-        )
+        self.embedding_model = get_embedding_model()
 
         self.client = chromadb.PersistentClient(
             path="app/storage/chroma"
@@ -22,9 +20,7 @@ class DataIngestion:
             name="documents"
         )
 
-    # ---------------------------
-    # MAIN PIPELINE
-    # ---------------------------
+    # Run whole ingestion pipeline:
     def ingest_doc(self, pdf_path, document_id):
 
         # STEP 0: early stop if already embedded
@@ -38,19 +34,19 @@ class DataIngestion:
                 "collection_count": self.collection.count()
             }
 
-        # STEP 1: extract text
+        # Extract text
         text = self.extract_texts(pdf_path)
 
-        # STEP 2: chunk text
+        # Chunk text
         chunks = self.create_chunks(text)
 
-        # STEP 3: embeddings
+        # Generate Embeddings
         embeddings = self.generate_embeddings(chunks)
 
-        # STEP 4: store in vector DB (IMPORTANT FIRST)
+        # Store in vector DB 
         self.store_chunks(document_id, chunks, embeddings)
 
-        # STEP 5: update metadata ONLY AFTER successful storage
+        # Update metadata after successful storage
         self.update_metadata(document_id, text, status="embedded")
 
         return {
@@ -60,9 +56,7 @@ class DataIngestion:
             "collection_count": self.collection.count()
         }
 
-    # ---------------------------
-    # STATUS CHECK
-    # ---------------------------
+    # Status Check
     def is_already_processed(self, document_id):
         meta_path = "app/storage/metadata/documents.json"
 
@@ -78,6 +72,7 @@ class DataIngestion:
 
         return False
 
+    # Metadata to return with already processed docs
     def get_document_metadata(self, document_id):
         meta_path = "app/storage/metadata/documents.json"
 
@@ -89,29 +84,8 @@ class DataIngestion:
                 return doc
 
         return None
-
-    # ---------------------------
-    # METADATA UPDATE
-    # ---------------------------
-    def update_metadata(self, document_id, extracted_text, status):
-
-        meta_path = "app/storage/metadata/documents.json"
-
-        try:
-            with open(meta_path, "r", encoding="utf-8") as f:
-                documents = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            documents = []
-
-        for doc in documents:
-            if doc["document_id"] == document_id:
-                doc["content"] = extracted_text
-                doc["status"] = status
-                break
-
-        with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump(documents, f, indent=4)
-
+    
+    # Extract Text from PDF
     def extract_texts(self, pdf_path):
         reader = PdfReader(pdf_path)
 
@@ -123,9 +97,7 @@ class DataIngestion:
         
         return text
 
-    # ---------------------------
-    # CHUNKING
-    # ---------------------------
+    # Chunking
     def create_chunks(self, text):
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=500,
@@ -133,15 +105,11 @@ class DataIngestion:
         )
         return splitter.split_text(text)
 
-    # ---------------------------
-    # EMBEDDINGS
-    # ---------------------------
+    # Embeddings
     def generate_embeddings(self, chunks):
         return self.embedding_model.encode(chunks)
 
-    # ---------------------------
-    # VECTOR STORAGE
-    # ---------------------------
+    # Vector Storage
     def store_chunks(self, doc_id, chunks, embeddings):
 
         ids = [str(uuid.uuid4()) for _ in chunks]
@@ -160,3 +128,25 @@ class DataIngestion:
             embeddings=embeddings.tolist(),
             metadatas=metadatas
         )
+
+
+
+    # Metadata Update
+    def update_metadata(self, document_id, extracted_text, status):
+
+        meta_path = "app/storage/metadata/documents.json"
+
+        try:
+            with open(meta_path, "r", encoding="utf-8") as f:
+                documents = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            documents = []
+
+        for doc in documents:
+            if doc["document_id"] == document_id:
+                doc["content"] = extracted_text
+                doc["status"] = status
+                break
+
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(documents, f, indent=4)

@@ -20,7 +20,7 @@ def upload_file(file: UploadFile = File(...)):
     load_pdf = LoadPDF()
     upload_info = load_pdf.store_pdf(file)
         
-
+    # Ingest Document
     ingested  = ingestion.ingest_doc(upload_info["doc_path"], upload_info['document_id'])
 
     return {
