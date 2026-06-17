@@ -3,6 +3,8 @@ from app.services.LoadPDF import LoadPDF
 from app.services.DataIngestion import DataIngestion
 
 router = APIRouter()
+ingestion = DataIngestion()
+
 
 @router.post("/upload_file")
 def upload_file(file: UploadFile = File(...)):
@@ -19,10 +21,11 @@ def upload_file(file: UploadFile = File(...)):
     upload_info = load_pdf.store_pdf(file)
         
 
-    ingestion = DataIngestion()
-    ext_text = ingestion.extract_text(upload_info["doc_path"], upload_info['document_id'])
+    ingested  = ingestion.ingest_doc(upload_info["doc_path"], upload_info['document_id'])
 
     return {
-        "Extracted Text": ext_text['text'][:500],
-        "Chunks_size" : ext_text['chunks_size']
+        "Extracted Text": ingested ['text'][:500],
+        "Chunks" : ingested ['chunks_length'],
+        "Embeddings: " : ingested ['embeddings_length'],
+        "Collection" : ingested ['collection_count']
     }
